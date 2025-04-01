@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn.metrics import r2_score
+from sklearn.model_selection import GridSearchCV
 
 def save_object(file_path, obj):
     try:
@@ -22,22 +23,35 @@ def save_object(file_path, obj):
         raise CustomException(e,sys)
     
 
-def evaluate_models(X_train, y_train, X_test, y_test, models):
-    report = {}
+def evaluate_models(X_train, y_train,X_test,y_test,models,param):
     try:
-        for model_name, model in models.items():
-            try:
-                model.fit(X_train, y_train)
-                predictions = model.predict(X_test)
-                test_model_score = r2_score(y_test, predictions)
-                report[model_name] = test_model_score
-                logging.info(f"Model {model_name} evaluated with score: {test_model_score}")
-            except Exception as model_error:
-                logging.error(f"Error evaluating model {model_name}: {model_error}")
-                report[model_name] = None  # Or handle it as needed
+        report = {}
+
+        for i in range(len(list(models))):
+            model = list(models.values())[i]
+            para=param[list(models.keys())[i]]
+
+            gs = GridSearchCV(model,para,cv=3)
+            gs.fit(X_train,y_train)
+
+            model.set_params(**gs.best_params_)
+            model.fit(X_train,y_train)
+
+            #model.fit(X_train, y_train)  # Train model
+
+            y_train_pred = model.predict(X_train)
+
+            y_test_pred = model.predict(X_test)
+
+            train_model_score = r2_score(y_train, y_train_pred)
+
+            test_model_score = r2_score(y_test, y_test_pred)
+
+            report[list(models.keys())[i]] = test_model_score
+
+        return report
+
     except Exception as e:
         raise CustomException(e, sys)
-    
-    return report
 
 
